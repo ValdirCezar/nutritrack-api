@@ -44,41 +44,22 @@ func (s *MealService) RegisterMeal(userID primitive.ObjectID, req model.MealRequ
 		return nil, errors.New("descrição da refeição deve ter no máximo 500 caracteres")
 	}
 
-	// Chama a OpenAI para analisar os alimentos descritos
+	// Chama a OpenAI para analisar os alimentos (temperature=0 garante determinismo)
 	foodResponse, err := s.openaiService.AnalyzeFood(description)
 	if err != nil {
 		return nil, err
 	}
 
-	// Para cada alimento retornado pela OpenAI, verifica o cache.
-	// Se já existe no cache, usa os valores cacheados (consistentes).
-	// Se não existe, salva no cache para uso futuro.
-	finalFoods := make([]model.Food, 0, len(foodResponse.Foods))
+	// Salva cada alimento no cache para referência futura
 	for _, food := range foodResponse.Foods {
-		cached, cacheErr := s.foodCacheService.GetFromCache(food.Name)
-		if cacheErr == nil && cached != nil {
-			// Usa valores do cache multiplicados pela quantidade
-			finalFoods = append(finalFoods, model.Food{
-				Name:     food.Name,
-				Quantity: food.Quantity,
-				Unit:     food.Unit,
-				Protein:  roundTo1(cached.PerUnitProtein * food.Quantity),
-				Carbs:    roundTo1(cached.PerUnitCarbs * food.Quantity),
-				Fat:      roundTo1(cached.PerUnitFat * food.Quantity),
-				Calories: roundTo1(cached.PerUnitCalories * food.Quantity),
-			})
-		} else {
-			// Não encontrou no cache, usa valor da OpenAI e salva no cache
-			finalFoods = append(finalFoods, food)
-			if saveErr := s.foodCacheService.SaveToCache(food); saveErr != nil {
-				log.Printf("Aviso: erro ao salvar alimento '%s' no cache: %v", food.Name, saveErr)
-			}
+		if saveErr := s.foodCacheService.SaveToCache(food); saveErr != nil {
+			log.Printf("Aviso: erro ao salvar alimento '%s' no cache: %v", food.Name, saveErr)
 		}
 	}
 
-	// Recalcula totais com base nos valores finais (cache ou OpenAI)
+	// Recalcula totais server-side (não confia no totals da OpenAI)
 	var totals model.NutrientTotals
-	for _, f := range finalFoods {
+	for _, f := range foodResponse.Foods {
 		totals.Protein += f.Protein
 		totals.Carbs += f.Carbs
 		totals.Fat += f.Fat
@@ -94,7 +75,7 @@ func (s *MealService) RegisterMeal(userID primitive.ObjectID, req model.MealRequ
 		UserID:      userID,
 		Date:        time.Now().Format("2006-01-02"),
 		Description: description,
-		Foods:       finalFoods,
+		Foods:       foodResponse.Foods,
 		Totals:      totals,
 	}
 

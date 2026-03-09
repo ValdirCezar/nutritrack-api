@@ -90,11 +90,30 @@ func (s *AuthService) Register(req model.RegisterRequest) error {
 		return errors.New("erro ao criar o usuário")
 	}
 
-	// Gera e envia código de verificação
-	if err := s.sendVerificationCode(req.Email, "register"); err != nil {
-		log.Printf("Erro ao enviar código de verificação para %s: %v", req.Email, err)
-		return errors.New("erro ao enviar código de verificação")
+	// Gera código e salva no banco
+	code, err := GenerateCode()
+	if err != nil {
+		return errors.New("erro ao gerar código de verificação")
 	}
+
+	vc := &model.VerificationCode{
+		Email:     req.Email,
+		Code:      code,
+		Type:      "register",
+		ExpiresAt: time.Now().Add(codeExpiry),
+		Used:      false,
+	}
+
+	if err := s.userRepo.SaveVerificationCode(vc); err != nil {
+		return errors.New("erro ao salvar código de verificação")
+	}
+
+	// Envia e-mail de forma assíncrona para não bloquear o request
+	go func() {
+		if err := s.emailService.SendVerificationCode(req.Email, code); err != nil {
+			log.Printf("Erro ao enviar código de verificação para %s: %v", req.Email, err)
+		}
+	}()
 
 	return nil
 }
@@ -391,7 +410,8 @@ func (s *AuthService) GetUserByID(userID primitive.ObjectID) (*model.User, error
 	return s.userRepo.FindByID(userID)
 }
 
-// sendVerificationCode gera e envia um código de verificação por e-mail
+// sendVerificationCode gera e envia um código de verificação por e-mail.
+// O envio do e-mail é feito de forma assíncrona para não bloquear o request.
 func (s *AuthService) sendVerificationCode(email, codeType string) error {
 	// Gera código de 6 dígitos
 	code, err := GenerateCode()
@@ -412,11 +432,20 @@ func (s *AuthService) sendVerificationCode(email, codeType string) error {
 		return errors.New("erro ao salvar código de verificação")
 	}
 
-	// Envia o código por e-mail
-	if codeType == "register" {
-		return s.emailService.SendVerificationCode(email, code)
-	}
-	return s.emailService.SendPasswordResetCode(email, code)
+	// Envia o código por e-mail de forma assíncrona
+	go func() {
+		var sendErr error
+		if codeType == "register" {
+			sendErr = s.emailService.SendVerificationCode(email, code)
+		} else {
+			sendErr = s.emailService.SendPasswordResetCode(email, code)
+		}
+		if sendErr != nil {
+			log.Printf("Erro ao enviar e-mail para %s (tipo: %s): %v", email, codeType, sendErr)
+		}
+	}()
+
+	return nil
 }
 
 // generateJWT gera um token JWT assinado com as claims do usuário.

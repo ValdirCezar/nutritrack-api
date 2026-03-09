@@ -10,6 +10,7 @@ import (
 type User struct {
 	ID           primitive.ObjectID `bson:"_id,omitempty" json:"id"`
 	Email        string             `bson:"email" json:"email"`
+	Name         string             `bson:"name,omitempty" json:"name,omitempty"`
 	PasswordHash string             `bson:"password_hash" json:"-"`
 	Verified     bool               `bson:"verified" json:"verified"`
 	CreatedAt    time.Time          `bson:"created_at" json:"created_at"`
@@ -18,6 +19,7 @@ type User struct {
 
 // RegisterRequest dados para cadastro de usuário
 type RegisterRequest struct {
+	Name     string `json:"name"`
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }

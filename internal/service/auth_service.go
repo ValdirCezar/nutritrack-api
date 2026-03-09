@@ -78,6 +78,7 @@ func (s *AuthService) Register(req model.RegisterRequest) error {
 	// Cria o objeto do usuário (não verificado)
 	user := &model.User{
 		Email:        req.Email,
+		Name:         req.Name,
 		PasswordHash: string(hashedPassword),
 		Verified:     false,
 	}

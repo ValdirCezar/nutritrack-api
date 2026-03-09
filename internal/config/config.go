@@ -22,8 +22,9 @@ type Config struct {
 	SMTPHost    string
 	SMTPPort    string
 	SMTPUser    string
-	SMTPPass    string
-	SMTPFrom    string
+	SMTPPass     string
+	SMTPFrom     string
+	ResendAPIKey string
 }
 
 // Load carrega as configurações a partir de variáveis de ambiente.
@@ -48,8 +49,9 @@ func Load() *Config {
 		SMTPHost:    getEnv("SMTP_HOST", "smtp.gmail.com"),
 		SMTPPort:    getEnv("SMTP_PORT", "587"),
 		SMTPUser:    getEnv("SMTP_USER", ""),
-		SMTPPass:    getEnv("SMTP_PASS", ""),
-		SMTPFrom:    getEnv("SMTP_FROM", ""),
+		SMTPPass:     getEnv("SMTP_PASS", ""),
+		SMTPFrom:     getEnv("SMTP_FROM", ""),
+		ResendAPIKey: getEnv("RESEND_API_KEY", ""),
 	}
 }
 

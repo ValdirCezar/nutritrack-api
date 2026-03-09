@@ -43,7 +43,7 @@ func main() {
 	foodCacheRepo := repository.NewFoodCacheRepository(db)
 
 	// --- Inicializa Services ---
-	emailService := service.NewEmailService(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUser, cfg.SMTPPass, cfg.SMTPFrom)
+	emailService := service.NewEmailService(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUser, cfg.SMTPPass, cfg.SMTPFrom, cfg.ResendAPIKey)
 	authService := service.NewAuthService(userRepo, emailService, cfg.JWTSecret)
 	profileService := service.NewProfileService(profileRepo)
 	openaiService := service.NewOpenAIService(cfg.OpenAIKey, cfg.OpenAIModel)

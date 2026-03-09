@@ -1,32 +1,46 @@
 package service
 
 import (
+	"bytes"
 	"crypto/rand"
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"math/big"
+	"net/http"
 	"net/smtp"
 	"strings"
 )
 
-// EmailService gerencia o envio de e-mails via SMTP
+// EmailService gerencia o envio de e-mails via Resend API (produção) ou SMTP (dev local)
 type EmailService struct {
-	host     string
-	port     string
-	user     string
-	password string
-	from     string
+	host       string
+	port       string
+	user       string
+	password   string
+	from       string
+	resendKey  string
 }
 
-// NewEmailService cria uma nova instância do serviço de e-mail
-func NewEmailService(host, port, user, password, from string) *EmailService {
-	return &EmailService{
-		host:     host,
-		port:     port,
-		user:     user,
-		password: password,
-		from:     from,
+// NewEmailService cria uma nova instância do serviço de e-mail.
+// Se resendKey estiver definida, usa Resend API (recomendado para produção/cloud).
+// Caso contrário, usa SMTP direto (funciona em dev local).
+func NewEmailService(host, port, user, password, from, resendKey string) *EmailService {
+	svc := &EmailService{
+		host:      host,
+		port:      port,
+		user:      user,
+		password:  password,
+		from:      from,
+		resendKey: resendKey,
 	}
+	if resendKey != "" {
+		log.Println("EmailService: usando Resend API para envio de e-mails")
+	} else {
+		log.Println("EmailService: usando SMTP para envio de e-mails")
+	}
+	return svc
 }
 
 // GenerateCode gera um código numérico de 6 dígitos criptograficamente seguro
@@ -99,8 +113,65 @@ func (s *EmailService) SendPasswordResetCode(toEmail, code string) error {
 	return s.sendHTML(toEmail, subject, body)
 }
 
-// sendHTML envia um e-mail HTML via SMTP
+// sendHTML envia e-mail via Resend API (se configurado) ou SMTP (fallback)
 func (s *EmailService) sendHTML(to, subject, htmlBody string) error {
+	if s.resendKey != "" {
+		return s.sendViaResend(to, subject, htmlBody)
+	}
+	return s.sendViaSMTP(to, subject, htmlBody)
+}
+
+// sendViaResend envia e-mail usando a API HTTP do Resend (https://resend.com)
+func (s *EmailService) sendViaResend(to, subject, htmlBody string) error {
+	// No free tier do Resend sem domínio verificado, o from deve ser onboarding@resend.dev
+	from := s.from
+	if !strings.Contains(from, "@resend.dev") {
+		// Usa o domínio de teste do Resend mantendo o nome
+		name := "NutriTrack AI"
+		if idx := strings.Index(from, "<"); idx > 0 {
+			name = strings.TrimSpace(from[:idx])
+		}
+		from = fmt.Sprintf("%s <onboarding@resend.dev>", name)
+	}
+
+	payload := map[string]interface{}{
+		"from":    from,
+		"to":      []string{to},
+		"subject": subject,
+		"html":    htmlBody,
+	}
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("erro ao serializar payload: %w", err)
+	}
+
+	req, err := http.NewRequest("POST", "https://api.resend.com/emails", bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("erro ao criar request: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+s.resendKey)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Printf("Erro ao chamar Resend API para %s: %v", to, err)
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		respBody, _ := io.ReadAll(resp.Body)
+		log.Printf("Resend API erro (status %d) para %s: %s", resp.StatusCode, to, string(respBody))
+		return fmt.Errorf("resend API retornou status %d", resp.StatusCode)
+	}
+
+	log.Printf("E-mail enviado com sucesso para %s via Resend", to)
+	return nil
+}
+
+// sendViaSMTP envia e-mail via SMTP (usado em desenvolvimento local)
+func (s *EmailService) sendViaSMTP(to, subject, htmlBody string) error {
 	// Extrai apenas o e-mail do campo "from" (pode ter formato "Nome <email>")
 	fromEmail := s.from
 	if idx := strings.Index(s.from, "<"); idx != -1 {

@@ -4,3 +4,4 @@ bin/
 *.exe
 *.test
 *.out
+server

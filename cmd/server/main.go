@@ -63,6 +63,12 @@ func main() {
 	// --- Configura Rotas ---
 	mux := http.NewServeMux()
 
+	// Health check (usado pelo Render)
+	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"status":"ok"}`))
+	})
+
 	// Rotas públicas (sem autenticação)
 	mux.HandleFunc("POST /api/auth/register", authHandler.Register)
 	mux.HandleFunc("POST /api/auth/verify-email", authHandler.VerifyEmail)

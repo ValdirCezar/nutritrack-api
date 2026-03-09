@@ -25,6 +25,7 @@ type openAIChatRequest struct {
 	Messages       []openAIChatMsg   `json:"messages"`
 	ResponseFormat openAIRespFormat  `json:"response_format"`
 	Temperature    float64           `json:"temperature"`
+	Seed           int               `json:"seed"`
 }
 
 // openAIChatMsg representa uma mensagem no formato do chat da OpenAI
@@ -109,7 +110,8 @@ Regras:
 			{Role: "user", Content: description},
 		},
 		ResponseFormat: openAIRespFormat{Type: "json_object"},
-		Temperature:    0.3,
+		Temperature:    0,
+		Seed:           42,
 	}
 
 	jsonBody, err := json.Marshal(reqBody)

@@ -70,10 +70,16 @@ func (s *MealService) RegisterMeal(userID primitive.ObjectID, req model.MealRequ
 	totals.Fat = roundTo1(totals.Fat)
 	totals.Calories = roundTo1(totals.Calories)
 
-	// Cria a refeição com a data de hoje no formato YYYY-MM-DD
+	// Usa a data enviada pelo frontend (timezone do usuário) ou fallback para UTC
+	mealDate := req.Date
+	if mealDate == "" {
+		mealDate = time.Now().Format("2006-01-02")
+	}
+
+	// Cria a refeição
 	meal := &model.Meal{
 		UserID:      userID,
-		Date:        time.Now().Format("2006-01-02"),
+		Date:        mealDate,
 		Description: description,
 		Foods:       foodResponse.Foods,
 		Totals:      totals,

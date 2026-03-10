@@ -39,6 +39,7 @@ type Meal struct {
 // MealRequest dados enviados pelo frontend para registrar uma refeição
 type MealRequest struct {
 	Description string `json:"description"`
+	Date        string `json:"date,omitempty"`
 }
 
 // DashboardResponse resposta consolidada do dashboard diário

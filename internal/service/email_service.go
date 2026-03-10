@@ -124,7 +124,7 @@ func (s *EmailService) sendHTML(to, subject, htmlBody string) error {
 // sendViaBrevo envia e-mail usando a API HTTP do Brevo (https://brevo.com)
 func (s *EmailService) sendViaBrevo(to, subject, htmlBody string) error {
 	payload := map[string]interface{}{
-		"sender":      map[string]string{"name": "NutriTrack AI", "email": "nutritrack@nutritrack-ai.com"},
+		"sender":      map[string]string{"name": "NutriTrack AI", "email": "valdircezar312@gmail.com"},
 		"to":          []map[string]string{{"email": to}},
 		"subject":     subject,
 		"htmlContent": htmlBody,

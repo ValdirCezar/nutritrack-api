@@ -20,7 +20,7 @@ const (
 	jwtExpiration       = 24 * time.Hour  // Tempo de expiração do token JWT
 	minPasswordLen      = 8              // Tamanho mínimo da senha
 	codeExpiry          = 10 * time.Minute // Tempo de expiração do código de verificação
-	codeCooldown        = 60 * time.Second // Cooldown mínimo entre envios de código
+	codeCooldown        = 30 * time.Second // Cooldown mínimo entre envios de código
 )
 
 // Regex para validação de e-mail (RFC 5322 simplificado)

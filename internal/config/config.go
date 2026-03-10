@@ -24,7 +24,7 @@ type Config struct {
 	SMTPUser    string
 	SMTPPass     string
 	SMTPFrom     string
-	ResendAPIKey string
+	BrevoAPIKey string
 }
 
 // Load carrega as configurações a partir de variáveis de ambiente.
@@ -51,7 +51,7 @@ func Load() *Config {
 		SMTPUser:    getEnv("SMTP_USER", ""),
 		SMTPPass:     getEnv("SMTP_PASS", ""),
 		SMTPFrom:     getEnv("SMTP_FROM", ""),
-		ResendAPIKey: getEnv("RESEND_API_KEY", ""),
+		BrevoAPIKey: getEnv("BREVO_API_KEY", ""),
 	}
 }
 

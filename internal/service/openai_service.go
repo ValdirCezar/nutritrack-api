@@ -75,15 +75,33 @@ func (s *OpenAIService) AnalyzeFood(description string) (*model.OpenAIFoodRespon
 IMPORTANTE — Base de dados nutricional:
 - Use como referência principal a Tabela TACO (Tabela Brasileira de Composição de Alimentos) da UNICAMP/NEPA.
 - Como referência secundária, use o USDA FoodData Central (para alimentos não encontrados na TACO).
-- Os valores devem refletir médias reais de composição por 100g, ajustados para a quantidade informada.
 - NÃO superestime nem subestime valores. Use as médias da tabela de referência.
 
-Exemplos de referência TACO (por unidade média):
-- 1 ovo cozido (~50g): ~6.3g proteína, 0.6g carboidrato, 4.2g gordura, 66 kcal
-- 100g arroz branco cozido: ~2.5g proteína, 28.1g carboidrato, 0.2g gordura, 128 kcal
-- 100g peito de frango grelhado: ~31.5g proteína, 0g carboidrato, 1.3g gordura, 159 kcal
-- 100g feijão carioca cozido: ~4.8g proteína, 13.6g carboidrato, 0.5g gordura, 76 kcal
-- 1 banana prata média (~86g): ~1.1g proteína, 22g carboidrato, 0.1g gordura, 89 kcal
+CÁLCULO PROPORCIONAL OBRIGATÓRIO:
+Você DEVE seguir estes passos para CADA alimento:
+1. Identifique o valor nutricional de referência por 100g (da TACO ou USDA).
+2. Calcule o fator de escala: fator = quantidade_informada_em_gramas / 100.
+3. Multiplique CADA nutriente pelo fator: valor_final = valor_por_100g × fator.
+4. Confira: se a quantidade for maior que 100g, TODOS os valores DEVEM ser maiores que os de 100g.
+
+Referências TACO por 100g (use como base de cálculo):
+- Ovo cozido (100g): 13.0g proteína, 0.6g carboidrato, 8.5g gordura, 146 kcal (1 unidade ≈ 50g)
+- Arroz branco cozido (100g): 2.5g proteína, 28.1g carboidrato, 0.2g gordura, 128 kcal
+- Peito de frango grelhado (100g): 31.5g proteína, 0g carboidrato, 1.3g gordura, 159 kcal
+- Feijão carioca cozido (100g): 4.8g proteína, 13.6g carboidrato, 0.5g gordura, 76 kcal
+- Banana prata (100g): 1.3g proteína, 26.0g carboidrato, 0.1g gordura, 98 kcal (1 unidade ≈ 86g)
+- Aveia em flocos (100g): 13.9g proteína, 66.6g carboidrato, 8.5g gordura, 394 kcal
+- Batata doce cozida (100g): 1.3g proteína, 18.4g carboidrato, 0.1g gordura, 77 kcal
+- Macarrão cozido (100g): 3.4g proteína, 19.9g carboidrato, 0.5g gordura, 102 kcal
+
+EXEMPLO DE CÁLCULO (siga este modelo):
+Entrada: "180g de aveia em flocos"
+→ Referência TACO para aveia em flocos (100g): 13.9g prot, 66.6g carb, 8.5g gord, 394 kcal
+→ Fator de escala: 180 / 100 = 1.8
+→ Proteína: 13.9 × 1.8 = 25.0g
+→ Carboidrato: 66.6 × 1.8 = 119.9g
+→ Gordura: 8.5 × 1.8 = 15.3g
+→ Calorias: 394 × 1.8 = 709.2 kcal
 
 O formato JSON deve ser:
 {
@@ -96,11 +114,12 @@ O formato JSON deve ser:
 Regras:
 - Todos os valores nutricionais devem ser numéricos (não strings)
 - Use gramas (g) como unidade padrão quando não especificada
-- Para alimentos descritos em unidades (ex: "2 ovos"), calcule baseado no peso médio da unidade
+- Para alimentos descritos em unidades (ex: "2 ovos"), converta para gramas (2 ovos = ~100g) e aplique o cálculo proporcional
 - Estime quantidades razoáveis quando não informadas (ex: "arroz" sem peso = porção típica de 150g)
 - Arredonde valores para 1 casa decimal
 - O campo "totals" deve ser a soma exata de todos os alimentos
-- Na dúvida entre valores, prefira a média conservadora da TACO`
+- Na dúvida entre valores, prefira a média conservadora da TACO
+- NUNCA retorne valores de 100g quando a quantidade informada for diferente de 100g`
 
 	// Monta o corpo da requisição
 	reqBody := openAIChatRequest{
